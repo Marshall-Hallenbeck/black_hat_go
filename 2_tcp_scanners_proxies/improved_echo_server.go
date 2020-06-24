@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io"
+	"bufio"
 	"log"
 	"net"
 )
@@ -11,28 +11,20 @@ func echo(conn net.Conn) {
 	defer conn.Close()
 
 	for {
-		// Create a buffer to store received data
-		// We define the buffer inside the for loop because it's not cleared between requests
-		b := make([]byte, 512)
-		// Receive data via conn.Read into a buffer
-		size, err := conn.Read(b[0:])
-		if err == io.EOF {
-			log.Println("Client disconnected")
-			break
-		}
+		reader := bufio.NewReader(conn)
+		s, err := reader.ReadString('\n')
 		if err != nil {
-			log.Println("Unexpected error")
-			break
+			log.Fatalln("Unable to read data")
 		}
-		// Getting a new line because this is how the logger function works
-		// https://golang.org/pkg/log/#Logger.Output
-		log.Printf("Received %d bytes: %s", size, string(b))
+		// This doesn't have the same problem with the extra newline as echo_server does
+		log.Printf("Read %d bytes: %s", len(s), s)
 
-		// Send data via conn.Write
-		log.Print("Writing data")
-		if _, err := conn.Write(b[0:size]); err != nil {
+		log.Println("Writing data")
+		writer := bufio.NewWriter(conn)
+		if _, err := writer.WriteString(s); err != nil {
 			log.Fatalln("Unable to write data")
 		}
+		writer.Flush()
 	}
 }
 
